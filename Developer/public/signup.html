@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live | Sign Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="signup.css" />
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA6oxno4zHhbBgOB7Y5EpmR3fMl9Y8SX4",
+      authDomain: "live-281b2.firebaseapp.com",
+      databaseURL: "https://live-281b2-default-rtdb.firebaseio.com",
+      projectId: "live-281b2",
+      storageBucket: "live-281b2.appspot.com",
+      messagingSenderId: "138809616254",
+      appId: "1:138809616254:web:bc91cd4b22df745b86352f",
+      measurementId: "G-QCV0T1PGGM"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+  </script>
+</head>
+
+<body>
+  <header>
+    <h2>Live</h2>
+    <nav class="nav-btns">
+      <a href="index.html">Home</a>
+      <a href="listings.html">Listings</a>
+      <a href="contact.html">Contact</a>
+      <a href="login.html">Login</a>
+      <a href="signup.html" aria-current="page">Sign Up</a>
+    </nav>
+  </header>
+
+  <main>
+    <div>
+      <h2>Create Your Account</h2>
+
+      <div class="account-switcher">
+        <div class="switch-indicator" id="switchIndicator"></div>
+        <div class="switch-option active" id="userOption">User</div>
+        <div class="switch-option" id="landlordOption">Landlord</div>
+      </div>
+
+      <!-- User Form -->
+      <form class="form" id="user-form">
+        <input type="text" id="userFullName" placeholder="Full Name" required />
+        <input type="text" id="userPhone" placeholder="Phone Number" required />
+        <input type="email" id="userEmail" placeholder="Email" required />
+        <input type="password" id="userPassword" placeholder="Password" required />
+        <button class="btn" type="submit">Sign Up as User</button>
+        <p class="account-prompt">Already have an account? <a href="login.html">Login</a></p>
+      </form>
+
+      <!-- Landlord Form -->
+      <form class="form hidden" id="landlord-form">
+        <input type="text" id="landlordFullName" placeholder="Full Name" required />
+        <input type="text" id="landlordPhone" placeholder="Phone Number" required />
+        <input type="email" id="landlordEmail" placeholder="Email" required />
+        <input type="password" id="landlordPassword" placeholder="Password" required />
+        <button class="btn" type="submit">Sign Up as Landlord</button>
+        <p class="account-prompt">Already have an account? <a href="login.html">Login</a></p>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Live • Designed with ❤️ in Zambia
+  </footer>
+
+  <script>
+    const userOption = document.getElementById("userOption");
+    const landlordOption = document.getElementById("landlordOption");
+    const switchIndicator = document.getElementById("switchIndicator");
+    const userForm = document.getElementById("user-form");
+    const landlordForm = document.getElementById("landlord-form");
+
+    userOption.onclick = () => {
+      switchIndicator.style.transform = "translateX(0%)";
+      userOption.classList.add("active");
+      landlordOption.classList.remove("active");
+      userForm.classList.remove("hidden");
+      landlordForm.classList.add("hidden");
+    };
+
+    landlordOption.onclick = () => {
+      switchIndicator.style.transform = "translateX(100%)";
+      landlordOption.classList.add("active");
+      userOption.classList.remove("active");
+      userForm.classList.add("hidden");
+      landlordForm.classList.remove("hidden");
+    };
+
+    // User Sign Up
+    userForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = userFullName.value.trim();
+      const phone = userPhone.value.trim();
+      const email = userEmail.value.trim();
+      const password = userPassword.value;
+
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await firebase.firestore().collection("users").doc(cred.user.uid).set({
+          fullName,
+          phone,
+          email,
+          accountType: "user",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("User account created!");
+        window.location.href = "index.html";
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+
+    // Landlord Sign Up
+    landlordForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = landlordFullName.value.trim();
+      const phone = landlordPhone.value.trim();
+      const email = landlordEmail.value.trim();
+      const password = landlordPassword.value;
+
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await firebase.firestore().collection("landlords").doc(cred.user.uid).set({
+          fullName,
+          phone,
+          email,
+          accountType: "landlord",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          property: {}
+        });
+        alert("Landlord account created!");
+        window.location.href = "listings.html";
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

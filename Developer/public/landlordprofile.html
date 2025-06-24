@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Landlord Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-cover bg-center bg-no-repeat font-sans" style="background-image: url('https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg');">
+
+  <!-- Floating Menu -->
+  <div class="fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-xl p-4 flex flex-col gap-2">
+    <a href="index.html" class="text-blue-600 hover:underline">Home</a>
+    <a href="listings.html" class="text-blue-600 hover:underline">Listings</a>
+    <a href="contact.html" class="text-blue-600 hover:underline">Contact</a>
+    <button onclick="logout()" class="text-red-600 hover:underline mt-2">Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-5xl mx-auto p-6">
+    <div class="bg-white bg-opacity-30 backdrop-blur-md rounded-2xl shadow-lg p-8">
+
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+          Welcome, <span id="landlordName" class="text-blue-600">Loading...</span> 👋
+        </h1>
+        <div class="flex items-center space-x-2 text-pink-600 text-lg font-semibold">
+          <i class="fas fa-heart"></i>
+          <span id="totalInterests">0</span>
+        </div>
+      </div>
+
+      <p class="text-gray-700 mb-8">Manage your listings and view inquiries here.</p>
+
+      <!-- Property Form -->
+      <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800" id="formTitle">Submit a New Property for Review</h2>
+        <form id="propertyForm" class="space-y-4 relative">
+          <input type="text" id="title" placeholder="e.g., Apartment, Office Space" class="w-full p-2 border rounded" required />
+          <textarea id="description" placeholder="Short description of a modern house" class="w-full p-2 border rounded" required></textarea>
+          <input type="number" id="price" placeholder="Price (ZMW)" class="w-full p-2 border rounded" required />
+          <input type="text" id="location" placeholder="e.g., Woodlands, Lusaka" class="w-full p-2 border rounded" required />
+          <select id="bedrooms" class="w-full p-2 border rounded" required>
+            <option value="">Select Bedrooms</option>
+            <option value="1">1 Bedroom</option>
+            <option value="2">2 Bedrooms</option>
+            <option value="3">3 Bedrooms</option>
+            <option value="4">4 Bedrooms</option>
+            <option value="5+">5+ Bedrooms</option>
+          </select>
+
+          <input type="file" id="imageFile" accept="image/*" class="w-full p-2 border rounded" required />
+
+          <div class="flex items-center space-x-4">
+            <span class="text-gray-700 font-medium">Status:</span>
+            <label for="statusToggle" class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="statusToggle" class="sr-only peer" />
+              <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 transition"></div>
+              <span class="ml-3 text-sm text-gray-700 font-semibold" id="statusLabel">Vacant</span>
+            </label>
+          </div>
+
+          <div class="relative">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center">
+              <span>Submit</span>
+              <svg id="formSpinner" class="ml-2 hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Approved Listings -->
+      <div>
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Approved Listings</h2>
+        <div id="propertyList" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <!-- Listings inserted dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA6oxno4zHhbBgOB7Y5EpmR3fMl9Y8SX4",
+      authDomain: "live-281b2.firebaseapp.com",
+      databaseURL: "https://live-281b2-default-rtdb.firebaseio.com",
+      projectId: "live-281b2",
+      storageBucket: "live-281b2.firebasestorage.app",
+      messagingSenderId: "138809616254",
+      appId: "1:138809616254:web:bc91cd4b22df745b86352f"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    let currentUserId = null;
+    let actionType = "submit";
+    let activeDocId = null;
+    let landlordPhone = "";
+
+    const geocode = async (location) => {
+      const apiKey = "fd727379e727470e94c99bf052f36afa";
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=${apiKey}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (!data.results.length) throw new Error("Location not found");
+      return data.results[0].geometry;
+    };
+
+    window.onload = () => {
+      auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          currentUserId = user.uid;
+          await loadLandlord(currentUserId);
+          await loadProperties(currentUserId);
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+    };
+
+    async function loadLandlord(uid) {
+      const doc = await db.collection("landlords").doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        document.getElementById("landlordName").textContent = data.name || "Landlord";
+        landlordPhone = data.phone || "";
+      } else {
+        alert("No landlord profile found.");
+      }
+    }
+
+    document.getElementById("statusToggle").addEventListener("change", function () {
+      document.getElementById("statusLabel").textContent = this.checked ? "Occupied" : "Vacant";
+    });
+
+    document.getElementById("propertyForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      formSpinner.classList.remove("hidden");
+
+      const title = titleEl.value;
+      const description = descriptionEl.value;
+      const price = priceEl.value;
+      const locationInput = locationEl.value;
+      const bedrooms = bedroomsEl.value;
+      const status = statusToggleEl.checked ? "Occupied" : "Vacant";
+      const imageFile = imageFileEl.files[0];
+
+      try {
+        if (!imageFile) throw new Error("Please select an image.");
+
+        const { lat, lng } = await geocode(locationInput);
+
+        const uniqueName = `properties/${Date.now()}_${imageFile.name}`;
+        const imageRef = firebase.storage().ref().child(uniqueName);
+        await imageRef.put(imageFile);
+        const imageUrl = await imageRef.getDownloadURL();
+
+        const propertyData = {
+          landlordId: currentUserId,
+          phone: landlordPhone,
+          title, description, price,
+          location: locationInput,
+          bedrooms, status, lat, lng,
+          imageUrl,
+          requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (actionType === "submit") {
+          propertyData.submittedAt = firebase.firestore.FieldValue.serverTimestamp();
+          propertyData.status = "Pending";
+          await db.collection("pendingListings").add(propertyData);
+          alert("✅ Property and image submitted for review.");
+        } else if (actionType === "edit" && activeDocId) {
+          await db.collection("editRequests").add({
+            landlordId: currentUserId,
+            phone: landlordPhone,
+            listingId: activeDocId,
+            updates: propertyData,
+            requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert("Edit request submitted for review.");
+        } else if (actionType === "delete" && activeDocId) {
+          await db.collection("deleteRequests").add({
+            landlordId: currentUserId,
+            phone: landlordPhone,
+            listingId: activeDocId,
+            propertyDetails: propertyData,
+            requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert("Delete request submitted for review.");
+        }
+
+        e.target.reset();
+        statusToggleEl.checked = false;
+        statusLabel.textContent = "Vacant";
+        actionType = "submit";
+        activeDocId = null;
+        formTitle.textContent = "Submit a New Property for Review";
+        await loadProperties(currentUserId);
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      } finally {
+        formSpinner.classList.add("hidden");
+      }
+    });
+
+    async function loadProperties(landlordId) {
+      const container = document.getElementById("propertyList");
+      container.innerHTML = "";
+
+      const snapshot = await db.collection("listings").where("landlordId", "==", landlordId).get();
+      let totalInterests = 0;
+
+      if (snapshot.empty) {
+        container.innerHTML = "<p class='text-gray-500'>No approved properties yet.</p>";
+        document.getElementById("totalInterests").textContent = "0";
+        return;
+      }
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const interestsSnapshot = await db.collection("interests").where("listingId", "==", doc.id).get();
+        const interestCount = interestsSnapshot.size;
+        totalInterests += interestCount;
+
+        const card = document.createElement("div");
+        card.className = "bg-white bg-opacity-60 backdrop-blur-md rounded-xl shadow-md p-4";
+
+        const statusColor = data.status === "Vacant" ? "text-green-600" : "text-red-600";
+
+        card.innerHTML = `
+          <h3 class="text-xl font-bold text-blue-700">${data.title}</h3>
+          ${data.imageUrl ? `<img src="${data.imageUrl}" class="w-full h-48 object-cover rounded mb-2" />` : ""}
+          <p class="text-sm italic text-gray-700 mb-1">${data.description}</p>
+          <p class="text-sm text-gray-700">📍 ${data.location}</p>
+          <p class="text-sm text-gray-700">🛏 ${data.bedrooms}</p>
+          <p class="text-sm font-semibold text-gray-800">💰 ZMW ${data.price}</p>
+          <p class="text-sm ${statusColor} font-semibold mb-2">Status: ${data.status}</p>
+          <p class="text-sm text-pink-600 font-medium mb-2">
+            <i class="fas fa-heart mr-1"></i>${interestCount} Interested
+          </p>
+          <button onclick='loadFormWithData("${doc.id}", ${JSON.stringify(data).replace(/"/g, "&quot;")}, "edit")' class="text-blue-600 hover:underline text-sm mr-4">Edit</button>
+          <button onclick='loadFormWithData("${doc.id}", ${JSON.stringify(data).replace(/"/g, "&quot;")}, "delete")' class="text-red-600 hover:underline text-sm">Delete</button>
+        `;
+        container.appendChild(card);
+      }
+
+      document.getElementById("totalInterests").textContent = totalInterests;
+    }
+
+    function loadFormWithData(docId, data, type) {
+      titleEl.value = data.title;
+      descriptionEl.value = data.description;
+      priceEl.value = data.price;
+      locationEl.value = data.location;
+      bedroomsEl.value = data.bedrooms;
+      statusToggleEl.checked = data.status === "Occupied";
+      statusLabel.textContent = data.status;
+
+      actionType = type;
+      activeDocId = docId;
+      formTitle.textContent = type === "edit" ? "Submit Edit Request" : "Submit Delete Request";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+    }
+
+    // DOM Cache
+    const titleEl = document.getElementById("title");
+    const descriptionEl = document.getElementById("description");
+    const priceEl = document.getElementById("price");
+    const locationEl = document.getElementById("location");
+    const bedroomsEl = document.getElementById("bedrooms");
+    const statusToggleEl = document.getElementById("statusToggle");
+    const statusLabel = document.getElementById("statusLabel");
+    const formTitle = document.getElementById("formTitle");
+    const imageFileEl = document.getElementById("imageFile");
+    const formSpinner = document.getElementById("formSpinner");
+  </script>
+</body>
+</html>
