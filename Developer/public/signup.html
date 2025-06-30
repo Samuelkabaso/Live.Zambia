@@ -1,0 +1,407 @@
+<!-- Save this as signup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live | Sign Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="signup.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA6oxno4zHhbBgOB7Y5EpmR3fMl9Y8SX4",
+      authDomain: "live-281b2.firebaseapp.com",
+      databaseURL: "https://live-281b2-default-rtdb.firebaseio.com",
+      projectId: "live-281b2",
+      storageBucket: "live-281b2.appspot.com",
+      messagingSenderId: "138809616254",
+      appId: "1:138809616254:web:bc91cd4b22df745b86352f",
+      measurementId: "G-QCV0T1PGGM"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  <style>
+    /* CSS unchanged */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+      background-size: cover;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      color: #fff;
+    }
+
+    header {
+      padding: 16px 5%;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .nav-btns {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btns a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .nav-btns a:hover {
+      color: #ffcc70;
+    }
+
+    main {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 140px);
+      padding: 40px 5%;
+      text-align: center;
+      flex-direction: column;
+    }
+
+    .account-switcher {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px auto;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .switch-option {
+      flex: 1;
+      padding: 14px 0;
+      font-weight: bold;
+      font-size: 1rem;
+      color: #fff;
+      cursor: pointer;
+      z-index: 2;
+      text-align: center;
+    }
+
+    .switch-option.active {
+      color: #222;
+    }
+
+    .switch-indicator {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: #ffcc70;
+      border-radius: 10px;
+      z-index: 1;
+      transition: all 0.3s ease;
+    }
+
+    .form {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 40px 5%;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      width: 100%;
+      max-width: 420px;
+      margin-top: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .form input {
+      width: 100%;
+      padding: 12px 16px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .form input::placeholder {
+      color: #ddd;
+    }
+
+    .btn {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #ffcc70;
+      color: #222;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      font-size: 14px;
+    }
+
+    .account-prompt {
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    .account-prompt a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+
+    .account-prompt a:hover {
+      text-decoration: underline;
+    }
+    #notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+}
+
+.notification {
+  background-color: #ffcc70;
+  color: #222;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  animation: slideIn 0.3s ease forwards;
+  opacity: 0.95;
+  cursor: pointer;
+  user-select: none;
+}
+
+.notification.error {
+  background-color: #ff6b6b;
+  color: #fff;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 0.95;
+    transform: translateX(0);
+  }
+}
+  </style>
+</head>
+
+<body>
+  <header>
+    <nav class="nav-btns">
+      <a href="index.html">Home</a>
+      <a href="listings.html">Listings</a>
+      <a href="contact.html">Contact</a>
+      <a href="login.html">Login</a>
+      <a href="signup.html" aria-current="page">Sign Up</a>
+    </nav>
+  </header>
+
+  <main>
+    <div>
+      <h2>Create Your Account</h2>
+      <div class="account-switcher">
+        <div class="switch-indicator" id="switchIndicator"></div>
+        <div class="switch-option active" id="userOption">User</div>
+        <div class="switch-option" id="landlordOption">Landlord</div>
+        <div class="switch-option" id="agentOption">Agent</div>
+      </div>
+
+      <!-- User Form -->
+      <form class="form" id="user-form">
+        <input type="text" id="userFullName" placeholder="Full Name" required />
+        <input type="text" id="userPhone" placeholder="Phone Number" required />
+        <input type="email" id="userEmail" placeholder="Email" required />
+        <input type="password" id="userPassword" placeholder="Password" required />
+        <button class="btn" type="submit">Sign Up as User</button>
+        <p class="account-prompt">Already have an account? <a href="login.html">Login</a></p>
+      </form>
+
+      <!-- Landlord Form -->
+      <form class="form hidden" id="landlord-form">
+        <input type="text" id="landlordFullName" placeholder="Full Name" required />
+        <input type="text" id="landlordPhone" placeholder="Phone Number" required />
+        <input type="email" id="landlordEmail" placeholder="Email" required />
+        <input type="password" id="landlordPassword" placeholder="Password" required />
+        <button class="btn" type="submit">Sign Up as Landlord</button>
+        <p class="account-prompt">Already have an account? <a href="login.html">Login</a></p>
+      </form>
+
+      <!-- Agent Form -->
+      <form class="form hidden" id="agent-form">
+        <input type="text" id="agentFullName" placeholder="Full Name" required />
+        <input type="text" id="agentPhone" placeholder="Phone Number" required />
+        <input type="email" id="agentEmail" placeholder="Email" required />
+        <input type="password" id="agentPassword" placeholder="Password" required />
+        <button class="btn" type="submit">Sign Up as Agent</button>
+        <p class="account-prompt">Already have an account? <a href="login.html">Login</a></p>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Live • Designed with ❤️ in Zambia
+  </footer>
+
+  <script>
+    function showNotification(message, type = "success", duration = 4000) {
+  const container = document.getElementById("notification-container");
+  const notif = document.createElement("div");
+  notif.className = `notification ${type === "error" ? "error" : ""}`;
+  notif.textContent = message;
+
+  // Remove notification on click
+  notif.addEventListener("click", () => {
+    container.removeChild(notif);
+  });
+
+  container.appendChild(notif);
+
+  // Auto remove after duration
+  setTimeout(() => {
+    if (container.contains(notif)) {
+      container.removeChild(notif);
+    }
+  }, duration);
+}
+    const userOption = document.getElementById("userOption");
+    const landlordOption = document.getElementById("landlordOption");
+    const agentOption = document.getElementById("agentOption");
+    const switchIndicator = document.getElementById("switchIndicator");
+
+    const userForm = document.getElementById("user-form");
+    const landlordForm = document.getElementById("landlord-form");
+    const agentForm = document.getElementById("agent-form");
+
+    function moveIndicatorTo(element) {
+      const parentRect = element.parentElement.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      const leftOffset = rect.left - parentRect.left;
+      switchIndicator.style.left = `${leftOffset}px`;
+      switchIndicator.style.width = `${rect.width}px`;
+    }
+
+    function updateSwitcher(selected) {
+      [userOption, landlordOption, agentOption].forEach(opt => opt.classList.remove("active"));
+      selected.classList.add("active");
+
+      userForm.classList.add("hidden");
+      landlordForm.classList.add("hidden");
+      agentForm.classList.add("hidden");
+
+      if (selected === userOption) userForm.classList.remove("hidden");
+      if (selected === landlordOption) landlordForm.classList.remove("hidden");
+      if (selected === agentOption) agentForm.classList.remove("hidden");
+
+      moveIndicatorTo(selected);
+    }
+
+    window.addEventListener("load", () => moveIndicatorTo(userOption));
+    window.addEventListener("resize", () => {
+      const activeOption = document.querySelector(".switch-option.active");
+      moveIndicatorTo(activeOption);
+    });
+
+    userOption.onclick = () => updateSwitcher(userOption);
+    landlordOption.onclick = () => updateSwitcher(landlordOption);
+    agentOption.onclick = () => updateSwitcher(agentOption);
+
+    // Signup logic
+    userForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = userFullName.value.trim();
+      const phone = userPhone.value.trim();
+      const email = userEmail.value.trim();
+      const password = userPassword.value;
+
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await firebase.firestore().collection("users").doc(cred.user.uid).set({
+          fullName,
+          phone,
+          email,
+          accountType: "user",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showNotification("User account created!");
+        window.location.href = "login.html";
+      } catch (err) {
+        showNotification("Error: " + err.message);
+      }
+    });
+
+    landlordForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = landlordFullName.value.trim();
+      const phone = landlordPhone.value.trim();
+      const email = landlordEmail.value.trim();
+      const password = landlordPassword.value;
+
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await firebase.firestore().collection("landlords").doc(cred.user.uid).set({
+          fullName,
+          phone,
+          email,
+          landlordId: cred.user.uid,
+          accountType: "landlord",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+       showNotification("Landlord account created!");
+        window.location.href = "listings.html";
+      } catch (err) {
+       showNotification("Error: " + err.message);
+      }
+    });
+
+    agentForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fullName = agentFullName.value.trim();
+      const phone = agentPhone.value.trim();
+      const email = agentEmail.value.trim();
+      const password = agentPassword.value;
+
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await firebase.firestore().collection("agents").doc(cred.user.uid).set({
+          fullName,
+          phone,
+          email,
+          agentId: cred.user.uid,
+          accountType: "agent",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+       showNotification("Agent account created!");
+        window.location.href = "listings.html";
+      } catch (err) {
+       showNotification("Error: " + err.message);
+      }
+    });
+  </script>
+  <!-- Notification container -->
+<div id="notification-container"></div>
+</body>
+</html>

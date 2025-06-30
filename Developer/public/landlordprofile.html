@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Landlord Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-cover bg-center bg-no-repeat font-sans" style="background-image: url('https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg');">
+
+  <!-- Floating Menu -->
+  <div class="fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-xl p-4 flex flex-col gap-2">
+    <a href="index.html" class="text-blue-600 hover:underline">Home</a>
+    <a href="listings.html" class="text-blue-600 hover:underline">Listings</a>
+    <a href="contact.html" class="text-blue-600 hover:underline">Contact</a>
+    <button onclick="logout()" class="text-red-600 hover:underline mt-2">Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-5xl mx-auto p-6">
+    <div class="bg-white bg-opacity-30 backdrop-blur-md rounded-2xl shadow-lg p-8">
+
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+          Welcome, <span id="landlordName" class="text-blue-600">Loading...</span> 👋
+        </h1>
+        <div class="flex items-center space-x-2 text-pink-600 text-lg font-semibold">
+        <i class="fas fa-heart"></i>
+        <span>Total Interests:</span>
+        <span id="totalInterests" class="font-bold">0</span>
+      </div>
+      </div>
+
+      <p class="text-gray-700 mb-8">Manage your listings and view inquiries here.</p>
+
+      <!-- Property Form -->
+      <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800" id="formTitle">Submit a New Property for Review</h2>
+        <form id="propertyForm" class="space-y-4 relative">
+          <input type="text" id="title" placeholder="e.g., Apartment, Office Space" class="w-full p-2 border rounded" required />
+          <textarea id="description" placeholder="Short description of a modern house" class="w-full p-2 border rounded" required></textarea>
+          <input type="number" id="price" placeholder="Price (ZMW)" class="w-full p-2 border rounded" required />
+          <input type="text" id="location" placeholder="e.g., Woodlands, Lusaka" class="w-full p-2 border rounded" required />
+          <select id="bedrooms" class="w-full p-2 border rounded" required>
+            <option value="">Select Bedrooms</option>
+            <option value="1">1 Bedroom</option>
+            <option value="2">2 Bedrooms</option>
+            <option value="3">3 Bedrooms</option>
+            <option value="4">4 Bedrooms</option>
+            <option value="5">5+ Bedrooms</option>
+            <option value="6">Not Applicable</option>
+          </select>
+
+        <input type="file" id="imageFile" accept="image/*" class="w-full p-2 border rounded" multiple required />
+          <div class="flex items-center space-x-4">
+            <span class="text-gray-700 font-medium">Status:</span>
+            <label for="statusToggle" class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="statusToggle" class="sr-only peer" />
+              <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 transition"></div>
+              <span class="ml-3 text-sm text-gray-700 font-semibold" id="statusLabel">Vacant</span>
+            </label>
+          </div>
+
+          <div class="relative">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center">
+              <span>Submit</span>
+              <svg id="formSpinner" class="ml-2 hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+      <!-- Interest Details Modal -->
+<div id="interestModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-60">
+  <div class="bg-white rounded-lg max-w-md w-full p-6 relative shadow-lg">
+    <button id="closeModalBtn" class="absolute top-3 right-3 text-gray-600 hover:text-gray-900 text-xl font-bold">&times;</button>
+    <h3 class="text-xl font-semibold mb-4">Interest Details</h3>
+    <div id="interestDetailsContent" class="text-gray-800">
+      <!-- Filled dynamically -->
+      Loading...
+    </div>
+  </div>
+</div>
+
+      <!-- Approved Listings -->
+<div>
+  <h2 class="text-xl font-semibold mb-4 text-gray-800">Approved Listings</h2>
+  
+  <!-- 🔍 Search Bar -->
+  <div class="mb-6">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Search by title or location..."
+      class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+      oninput="filterListings()"
+    />
+  </div>
+
+  <div id="propertyList" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <!-- Listings inserted dynamically -->
+  </div>
+</div>
+<div id="toastContainer" class="fixed bottom-10 right-5 flex flex-col gap-2 z-50"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+ <script>
+  function showToast(message, type = "success") {
+    const toast = document.createElement("div");
+    const bgColor = type === "error" ? "bg-red-500" : type === "info" ? "bg-blue-500" : "bg-green-500";
+
+    toast.className = `${bgColor} text-white px-4 py-3 rounded shadow-md transition-opacity duration-500 ease-in-out`;
+    toast.innerText = message;
+
+    document.getElementById("toastContainer").appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("opacity-0");
+      setTimeout(() => toast.remove(), 500);
+    }, 3000);
+  }
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCA6oxno4zHhbBgOB7Y5EpmR3fMl9Y8SX4",
+    authDomain: "live-281b2.firebaseapp.com",
+    databaseURL: "https://live-281b2-default-rtdb.firebaseio.com",
+    projectId: "live-281b2",
+    storageBucket: "live-281b2.firebasestorage.app",
+    messagingSenderId: "138809616254",
+    appId: "1:138809616254:web:bc91cd4b22df745b86352f"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  let currentUserId = null;
+  let actionType = "submit";
+  let activeDocId = null;
+  let landlordPhone = "";
+
+  const geocode = async (location) => {
+    const apiKey = "fd727379e727470e94c99bf052f36afa";
+    const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!data.results.length) throw new Error("Location not found");
+    return data.results[0].geometry;
+  };
+
+  window.onload = () => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        await loadLandlord(currentUserId);
+        await loadProperties(currentUserId);
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+  };
+
+  async function loadLandlord(uid) {
+    const doc = await db.collection("landlords").doc(uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      document.getElementById("landlordName").textContent = data.name || "Landlord";
+      landlordPhone = data.phone || "";
+    } else {
+      showToast("No landlord profile found.", "error");
+    }
+  }
+
+  document.getElementById("statusToggle").addEventListener("change", function () {
+    document.getElementById("statusLabel").textContent = this.checked ? "Occupied" : "Vacant";
+  });
+
+  document.getElementById("propertyForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formSpinner.classList.remove("hidden");
+
+    const title = titleEl.value.trim();
+    const description = descriptionEl.value.trim();
+    const price = priceEl.value.trim();
+    const locationInput = locationEl.value.trim();
+    const bedrooms = bedroomsEl.value;
+    const status = statusToggleEl.checked ? "Occupied" : "Vacant";
+    const imageFiles = imageFileEl.files;
+
+    if (!imageFiles.length) {
+      showToast("❌ Please select at least one image.", "error");
+      formSpinner.classList.add("hidden");
+      return;
+    }
+
+    try {
+      const uploadPromises = [];
+      for (const file of imageFiles) {
+        const imageRef = storage.ref().child(`properties/${Date.now()}_${file.name}`);
+        const uploadTask = imageRef.put(file).then(() => imageRef.getDownloadURL());
+        uploadPromises.push(uploadTask);
+      }
+      const imageUrls = await Promise.all(uploadPromises);
+
+      const { lat, lng } = await geocode(locationInput);
+
+      const propertyData = {
+        landlordId: currentUserId,
+        phone: landlordPhone,
+        title,
+        description,
+        price,
+        location: locationInput,
+        bedrooms,
+        status,
+        coordinates: { lat, lng }, // ✅ coordinates nested
+        imageUrls,
+        requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (actionType === "submit") {
+        propertyData.submittedAt = firebase.firestore.FieldValue.serverTimestamp();
+        propertyData.status = "Pending";
+        await db.collection("pendingListings").add(propertyData);
+        showToast("✅ Property submitted for review.");
+      } else if (actionType === "edit" && activeDocId) {
+        await db.collection("editRequests").add({
+          landlordId: currentUserId,
+          phone: landlordPhone,
+          listingId: activeDocId,
+          updates: propertyData,
+          requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast("✏️ Edit request submitted for review.");
+      } else if (actionType === "delete" && activeDocId) {
+        await db.collection("deleteRequests").add({
+          landlordId: currentUserId,
+          phone: landlordPhone,
+          listingId: activeDocId,
+          propertyDetails: propertyData,
+          requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast("🗑️ Delete request submitted for review.");
+      }
+
+      e.target.reset();
+      statusToggleEl.checked = false;
+      statusLabel.textContent = "Vacant";
+      actionType = "submit";
+      activeDocId = null;
+      formTitle.textContent = "Submit a New Property for Review";
+      await loadProperties(currentUserId);
+
+    } catch (err) {
+      showToast("❌ Error: " + err.message, "error");
+    } finally {
+      formSpinner.classList.add("hidden");
+    }
+  });
+
+  async function loadProperties(landlordId) {
+    const container = document.getElementById("propertyList");
+    container.innerHTML = "";
+
+    const snapshot = await db.collection("listings").where("landlordId", "==", landlordId).get();
+    let totalInterests = 0;
+
+    if (snapshot.empty) {
+      container.innerHTML = "<p class='text-gray-500'>No approved properties yet.</p>";
+      document.getElementById("totalInterests").textContent = "0";
+      return;
+    }
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const listingId = doc.id;
+
+      const interestsSnapshot = await db.collection("interests").where("listingId", "==", listingId).get();
+      const interestCount = interestsSnapshot.size;
+      totalInterests += interestCount;
+
+      let interestedClientsHTML = "";
+      if (interestCount > 0) {
+        interestedClientsHTML = `
+          <p class="mt-2 font-semibold text-gray-700">Interested Clients:</p>
+          <ul class="list-disc list-inside text-gray-600 text-sm max-h-32 overflow-auto">
+            ${interestsSnapshot.docs.map(interestDoc => {
+              const interestData = interestDoc.data();
+              const phone = interestData.phone || "No phone";
+              return `
+                <li class="flex justify-between items-center mb-1">
+                  <button
+                    onclick="showInterestDetails('${interestDoc.id}')"
+                    class="text-blue-600 underline text-sm hover:text-blue-800 focus:outline-none"
+                  >
+                    ${phone}
+                  </button>
+                  <button onclick="clearInterest('${interestDoc.id}')" class="ml-2 text-red-600 hover:text-red-800 text-xs font-semibold">
+                    Clear
+                  </button>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        `;
+      } else {
+        interestedClientsHTML = `<p class="mt-2 italic text-gray-500 text-sm">No interested clients yet.</p>`;
+      }
+
+      const isOccupied = data.status === "Occupied";
+      const imageUrls = data.imageUrls || [];
+      const hasImages = imageUrls.length > 0;
+
+      let imagesHTML = "";
+      if (hasImages) {
+        if (imageUrls.length === 1) {
+          imagesHTML = `
+            <div id="slideshow-${listingId}" class="relative w-full h-40 mb-2">
+              <img src="${imageUrls[0]}" class="w-full h-40 object-cover rounded" id="slide-${listingId}" />
+            </div>
+          `;
+        } else {
+          imagesHTML = `
+            <div id="slideshow-${listingId}" class="relative w-full h-40 mb-2">
+              <img src="${imageUrls[0]}" class="w-full h-40 object-cover rounded" id="slide-${listingId}" />
+              <button onclick="prevSlide('${listingId}')" class="absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-700 text-white px-2 py-1 rounded-full text-xs">Prev</button>
+              <button onclick="nextSlide('${listingId}')" class="absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-700 text-white px-2 py-1 rounded-full text-xs">Next</button>
+            </div>
+          `;
+        }
+        window.slides = window.slides || {};
+        window.slides[listingId] = { index: 0, images: imageUrls };
+      } else {
+        imagesHTML = "<p class='text-gray-500 italic'>No images uploaded.</p>";
+      }
+
+      const card = document.createElement("div");
+      card.className = "bg-white bg-opacity-60 backdrop-blur-md rounded-xl shadow-md p-4 listing-card";
+      card.setAttribute("data-title", data.title.toLowerCase());
+      card.setAttribute("data-location", data.location.toLowerCase());
+
+      card.innerHTML = `
+        <h3 class="text-xl font-bold text-blue-700">${data.title}</h3>
+        ${imagesHTML}
+        <p class="text-sm italic text-gray-700 mb-1">${data.description}</p>
+        <p class="text-sm text-gray-700">📍 ${data.location}</p>
+        <p class="text-sm text-gray-700">🛏 ${data.bedrooms}</p>
+        <p class="text-sm font-semibold text-gray-800">💰 ZMW ${data.price}</p>
+
+        <div class="flex items-center space-x-4 mb-2">
+          <span class="text-gray-700 font-semibold">Status:</span>
+          <label for="statusSwitch-${listingId}" class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="statusSwitch-${listingId}" class="sr-only peer" ${isOccupied ? "checked" : ""} />
+            <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 transition"></div>
+            <span class="ml-3 text-sm ${isOccupied ? "text-red-600" : "text-green-600"} font-semibold">${isOccupied ? "Occupied" : "Vacant"}</span>
+          </label>
+        </div>
+
+        ${interestedClientsHTML}
+
+        <button onclick='loadFormWithData("${listingId}", ${JSON.stringify(data).replace(/"/g, "&quot;")}, "edit")' class="text-blue-600 hover:underline text-sm mr-4 mt-3">Edit</button>
+        <button onclick='loadFormWithData("${listingId}", ${JSON.stringify(data).replace(/"/g, "&quot;")}, "delete")' class="text-red-600 hover:underline text-sm mt-3">Delete</button>
+      `;
+
+      card.querySelector(`#statusSwitch-${listingId}`).addEventListener("change", async function (e) {
+        const newStatus = e.target.checked ? "Occupied" : "Vacant";
+        try {
+          await db.collection("listings").doc(listingId).update({ status: newStatus });
+          const labelSpan = e.target.nextElementSibling.nextElementSibling;
+          labelSpan.textContent = newStatus;
+          labelSpan.classList.toggle("text-red-600", newStatus === "Occupied");
+          labelSpan.classList.toggle("text-green-600", newStatus === "Vacant");
+        } catch (err) {
+          showToast("Failed to update status: " + err.message);
+          e.target.checked = !e.target.checked;
+        }
+      });
+
+      container.appendChild(card);
+    }
+
+    document.getElementById("totalInterests").textContent = totalInterests;
+  }
+
+  async function clearInterest(interestDocId) {
+    if (!confirm("Are you sure you want to clear this interest?")) return;
+    try {
+      await db.collection("interests").doc(interestDocId).delete();
+      showToast("Interest cleared.");
+      if (currentUserId) {
+        loadProperties(currentUserId);
+      }
+    } catch (err) {
+      showToast("Failed to clear interest: " + err.message);
+    }
+  }
+
+  const titleEl = document.getElementById("title");
+  const descriptionEl = document.getElementById("description");
+  const priceEl = document.getElementById("price");
+  const locationEl = document.getElementById("location");
+  const bedroomsEl = document.getElementById("bedrooms");
+  const statusToggleEl = document.getElementById("statusToggle");
+  const statusLabel = document.getElementById("statusLabel");
+  const imageFileEl = document.getElementById("imageFile");
+  const formTitle = document.getElementById("formTitle");
+  const formSpinner = document.getElementById("formSpinner");
+
+  function loadFormWithData(listingId, data, type) {
+    title
+    titleEl.value = data.title || "";
+    descriptionEl.value = data.description || "";
+    priceEl.value = data.price || "";
+    locationEl.value = data.location || "";
+    bedroomsEl.value = data.bedrooms || "1";
+    statusToggleEl.checked = data.status === "Occupied";
+    statusLabel.textContent = data.status === "Occupied" ? "Occupied" : "Vacant";
+    formTitle.textContent = type === "edit" ? "Edit Property" : "Delete Property";
+    actionType = type;
+    activeDocId = listingId;
+  }
+
+  function prevSlide(listingId) {
+    const slideshow = window.slides[listingId];
+    slideshow.index = (slideshow.index - 1 + slideshow.images.length) % slideshow.images.length;
+    document.getElementById(`slide-${listingId}`).src = slideshow.images[slideshow.index];
+  }
+
+  function nextSlide(listingId) {
+    const slideshow = window.slides[listingId];
+    slideshow.index = (slideshow.index + 1) % slideshow.images.length;
+    document.getElementById(`slide-${listingId}`).src = slideshow.images[slideshow.index];
+  }
+
+  function showInterestDetails(interestDocId) {
+    db.collection("interests").doc(interestDocId).get().then(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        const details = `
+          📞 Phone: ${data.phone || "N/A"}
+          👤 Name: ${data.name || "N/A"}
+          📧 Email: ${data.email || "N/A"}
+          🗓️ Date: ${data.timestamp?.toDate().toLocaleString() || "N/A"}
+        `;
+        alert(details);
+      } else {
+        showToast("Interest details not found.", "error");
+      }
+    }).catch(err => {
+      showToast("Failed to fetch details: " + err.message, "error");
+    });
+  }
+</script>
+  <!-- Toast Notification Container -->
+<div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+</body>
+</html>

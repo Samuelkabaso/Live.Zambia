@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agent Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+  #notification-container {
+    font-family: 'Inter', sans-serif;
+    pointer-events: none; /* Let clicks pass through when no notifications */
+  }
+  .notification {
+    pointer-events: auto; /* Enable interaction inside notifications */
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideInRight 0.3s ease forwards;
+  }
+  .notification.success { background-color: #16a34a; } /* green */
+  .notification.error { background-color: #dc2626; }   /* red */
+  .notification.info { background-color: #2563eb; }    /* blue */
+
+  .notification button.close-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 15px;
+    line-height: 1;
+  }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+</style>
+</head>
+<body class="bg-cover bg-center bg-no-repeat font-sans" style="background-image: url('https://images.pexels.com/photos/186077/pexels-photo-186077.jpeg');">
+
+  <!-- Floating Menu -->
+  <div class="fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-xl p-4 flex flex-col gap-2">
+    <a href="index.html" class="text-blue-600 hover:underline">Home</a>
+    <a href="listings.html" class="text-blue-600 hover:underline">Listings</a>
+    <a href="contact.html" class="text-blue-600 hover:underline">Contact</a>
+    <button onclick="logout()" class="text-red-600 hover:underline mt-2">Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-5xl mx-auto p-6">
+    <div class="bg-white bg-opacity-30 backdrop-blur-md rounded-2xl shadow-lg p-8">
+
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+          Welcome, <span id="agentName" class="text-blue-600">Loading...</span> 👋
+        </h1>
+        <div class="flex items-center space-x-2 text-pink-600 text-lg font-semibold">
+          <i class="fas fa-heart"></i>
+          <span>Total Interests:</span>
+          <span id="totalInterests" class="font-bold">0</span>
+        </div>
+      </div>
+
+      <p class="text-gray-700 mb-8">Manage your property listings and view client inquiries here.</p>
+
+      <!-- Property Form -->
+      <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800" id="formTitle">Submit a New Property for Review</h2>
+        <form id="propertyForm" class="space-y-4 relative">
+          <input type="text" id="title" placeholder="e.g., Apartment, Office Space" class="w-full p-2 border rounded" required />
+          <textarea id="description" placeholder="Short description of a modern house" class="w-full p-2 border rounded" required></textarea>
+          <input type="number" id="price" placeholder="Price (ZMW)" class="w-full p-2 border rounded" required />
+          <input type="text" id="location" placeholder="e.g., Woodlands, Lusaka" class="w-full p-2 border rounded" required />
+          <select id="bedrooms" class="w-full p-2 border rounded" required>
+          <option value="">Select Bedrooms</option>
+          <option value="0">None</option>
+          <option value="1">1 Bedroom</option>
+          <option value="2">2 Bedrooms</option>
+          <option value="3">3 Bedrooms</option>
+          <option value="4">4 Bedrooms</option>
+          <option value="5">5+ Bedrooms</option>
+          <option value="6">Not Applicable</option>
+          </select>
+
+          <input type="file" id="imageFile" accept="image/*" multiple required />
+
+          <div class="flex items-center space-x-4">
+            <span class="text-gray-700 font-medium">Status:</span>
+            <label for="statusToggle" class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="statusToggle" class="sr-only peer" />
+              <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 transition"></div>
+              <span class="ml-3 text-sm text-gray-700 font-semibold" id="statusLabel">Vacant</span>
+            </label>
+          </div>
+
+          <div class="relative">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center">
+              <span>Submit</span>
+              <svg id="formSpinner" class="ml-2 hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Approved Listings -->
+      <div>
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Approved Listings</h2>
+        
+        <!-- 🔍 Search Bar -->
+        <div class="mb-6">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search by title or location..."
+            class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            oninput="filterListings()"
+          />
+        </div>
+
+        <div id="propertyList" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <!-- Listings inserted dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal Backdrop & Card -->
+<div id="interest-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+    <button id="close-modal" class="absolute top-2 right-2 text-gray-600 hover:text-black text-2xl">&times;</button>
+    <h2 class="text-xl font-semibold mb-4">Client Interest Details</h2>
+    <div id="interest-modal-content" class="space-y-2 text-gray-800"></div>
+  </div>
+</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCA6oxno4zHhbBgOB7Y5EpmR3fMl9Y8SX4",
+  authDomain: "live-281b2.firebaseapp.com",
+  databaseURL: "https://live-281b2-default-rtdb.firebaseio.com",
+  projectId: "live-281b2",
+  storageBucket: "live-281b2.firebasestorage.app",
+  messagingSenderId: "138809616254",
+  appId: "1:138809616254:web:bc91cd4b22df745b86352f"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+let currentUserId = null;
+let actionType = "submit";
+let activeDocId = null;
+let agentPhone = "";
+
+const geocode = async (location) => {
+  const apiKey = "fd727379e727470e94c99bf052f36afa";
+  const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=${apiKey}`;
+  const response = await fetch(url);
+  const data = await response.json();
+  if (!data.results.length) throw new Error("Location not found");
+  return data.results[0].geometry;
+};
+
+window.onload = () => {
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      currentUserId = user.uid;
+      await loadAgent(currentUserId);
+      await loadProperties(currentUserId);
+    } else {
+      window.location.href = "login.html";
+    }
+  });
+};
+
+async function loadAgent(uid) {
+  const doc = await db.collection("agents").doc(uid).get();
+  if (doc.exists) {
+    const data = doc.data();
+    document.getElementById("agentName").textContent = data.name || "Agent";
+    agentPhone = data.phone || "";
+  } else {
+    showNotification("No agent profile found.");
+  }
+}
+
+document.getElementById("statusToggle").addEventListener("change", function () {
+  document.getElementById("statusLabel").textContent = this.checked ? "Occupied" : "Vacant";
+});
+
+const titleEl = document.getElementById("title");
+const descriptionEl = document.getElementById("description");
+const priceEl = document.getElementById("price");
+const locationEl = document.getElementById("location");
+const bedroomsEl = document.getElementById("bedrooms");
+const statusToggle = document.getElementById("statusToggle");
+const imageFileEl = document.getElementById("imageFile");
+const formSpinner = document.getElementById("formSpinner");
+const propertyListEl = document.getElementById("propertyList");
+const totalInterestsEl = document.getElementById("totalInterests");
+
+document.getElementById("propertyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  formSpinner.classList.remove("hidden");
+
+  const title = titleEl.value.trim();
+  const description = descriptionEl.value.trim();
+  const price = Number(priceEl.value);
+  const location = locationEl.value.trim();
+  const bedrooms = bedroomsEl.value;
+  const status = statusToggle.checked ? "Occupied" : "Vacant";
+  const imageFiles = imageFileEl.files;
+
+  if (!imageFiles.length) {
+    showNotification("Please select at least one image.");
+    formSpinner.classList.add("hidden");
+    return;
+  }
+
+  try {
+    const geo = await geocode(location);
+
+    if (actionType === "submit") {
+      // Upload all selected images and get their URLs
+      const uploadPromises = [];
+      for (const file of imageFiles) {
+        const storageRef = storage.ref(`agent-listings/${currentUserId}/${Date.now()}_${file.name}`);
+        uploadPromises.push(
+          storageRef.put(file).then(() => storageRef.getDownloadURL())
+        );
+      }
+      const imageUrls = await Promise.all(uploadPromises);
+
+      await db.collection("pendingListings").add({
+        agentId: currentUserId,
+        title,
+        description,
+        price,
+        location,
+        bedrooms,
+        status,
+        imageUrls, // array of URLs
+        approved: false,
+        coordinates: geo,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showNotification("Property submitted for approval.");
+    } else if (actionType === "edit" && activeDocId) {
+      const updateData = {
+        title,
+        description,
+        price,
+        location,
+        bedrooms,
+        status,
+        coordinates: geo,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (imageFiles.length > 0) {
+        // Upload new images and overwrite existing imageUrls
+        const uploadPromises = [];
+        for (const file of imageFiles) {
+          const storageRef = storage.ref(`agent-listings/${currentUserId}/${Date.now()}_${file.name}`);
+          uploadPromises.push(
+            storageRef.put(file).then(() => storageRef.getDownloadURL())
+          );
+        }
+        updateData.imageUrls = await Promise.all(uploadPromises);
+      }
+
+      await db.collection("listings").doc(activeDocId).update(updateData);
+      showNotification("Property updated.");
+      actionType = "submit";
+      activeDocId = null;
+      document.getElementById("formTitle").textContent = "Submit a New Property for Review";
+    }
+
+    propertyForm.reset();
+    statusToggle.checked = false;
+    document.getElementById("statusLabel").textContent = "Vacant";
+    formSpinner.classList.add("hidden");
+    loadProperties(currentUserId);
+
+  } catch (error) {
+    showNotification("Error: " + error.message);
+    formSpinner.classList.add("hidden");
+  }
+});
+
+async function loadProperties(agentId) {
+  propertyListEl.innerHTML = "";
+  totalInterestsEl.textContent = "0";
+
+  try {
+    const snapshot = await db.collection("listings")
+      .where("agentId", "==", agentId)
+      .get();
+
+    if (snapshot.empty) {
+      propertyListEl.innerHTML = "<p class='col-span-full text-center text-gray-600'>No approved listings found.</p>";
+      return;
+    }
+
+    let totalInterestCount = 0;
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      // Fetch interests for this listing
+      const interestsSnapshot = await db.collection("interests")
+        .where("listingId", "==", doc.id)
+        .get();
+
+      const interestedClients = interestsSnapshot.docs.map(d => ({
+        id: d.id,
+        phone: d.data().phone || "No phone"
+      }));
+
+      totalInterestCount += interestedClients.length;
+
+      propertyListEl.insertAdjacentHTML("beforeend", createListingHTML(doc.id, data, interestedClients, true));
+    }
+    totalInterestsEl.textContent = totalInterestCount;
+  } catch (error) {
+    showNotification("Error loading listings: " + error.message);
+  }
+}
+
+function createListingHTML(listingId, data, interestedClients, isApproved) {
+  const phonesHTML = isApproved
+    ? (interestedClients.length
+        ? `<p class="mt-3 font-semibold text-gray-700">Interested Clients:</p>
+           <ul class="list-disc list-inside text-gray-600 text-sm max-h-32 overflow-auto">
+             ${interestedClients.map(client => `
+               <li class="flex justify-between items-center">
+                 <span onclick="showInterestDetails(${JSON.stringify(client).replace(/"/g, '&quot;')})"
+      class="cursor-pointer text-blue-600 hover:underline">${client.phone}</span>
+                 <button onclick="clearInterest('${listingId}', '${client.id}')"
+                         class="ml-2 text-red-600 hover:text-red-800 text-xs font-semibold">
+                   Clear
+                 </button>
+               </li>
+             `).join("")}
+           </ul>`
+        : `<p class="mt-3 italic text-gray-500 text-sm">No interested clients yet.</p>`)
+    : `<p class="mt-3 italic text-yellow-600 text-sm">Pending Approval</p>`;
+
+  const createdAtStr = data.createdAt && data.createdAt.toDate
+    ? data.createdAt.toDate().toLocaleString()
+    : "N/A";
+
+  const isOccupied = data.status === "Occupied";
+
+  // Show multiple images as a grid
+  const imagesHTML = data.imageUrls && data.imageUrls.length
+    ? `<div class="grid grid-cols-2 gap-2 mb-4">
+         ${data.imageUrls.map(url => `<img src="${url}" alt="${data.title}" class="w-full h-32 object-cover rounded-md" />`).join('')}
+       </div>`
+    : `<img src="${data.imageUrl || ''}" alt="${data.title}" class="w-full h-48 object-cover rounded-md mb-4" />`;
+
+  return `
+    <div class="bg-white bg-opacity-70 backdrop-blur rounded-lg shadow-md p-4">
+      ${imagesHTML}
+      <h3 class="text-lg font-semibold text-gray-800">${data.title}</h3>
+      <p class="text-gray-700 mb-2">${data.description}</p>
+     <p class="text-blue-700 font-semibold mb-1">Price: ZMW ${data.price.toLocaleString()}</p>
+      <p class="text-gray-600 mb-1">Location: ${data.location}</p>
+      <p class="text-gray-600 mb-1">Bedrooms: ${data.bedrooms}</p>
+      <p class="mb-1">Status: <strong class="${isOccupied ? "text-red-600" : "text-green-600"}">${data.status}</strong></p>
+      <p class="text-xs text-gray-500 mb-1">Created: ${createdAtStr}</p>
+
+      <div class="flex space-x-3 mt-2">
+        <button onclick="editListing('${listingId}')" class="bg-yellow-400 hover:bg-yellow-500 rounded px-3 py-1 text-xs font-semibold text-gray-900">
+          Edit
+        </button>
+        <button onclick="toggleStatus('${listingId}', '${data.status}')" class="bg-green-500 hover:bg-green-600 rounded px-3 py-1 text-xs font-semibold text-white">
+          Toggle Status
+        </button>
+        <button onclick="deleteListing('${listingId}')" class="bg-red-600 hover:bg-red-700 rounded px-3 py-1 text-xs font-semibold text-white">
+          Delete
+        </button>
+      </div>
+
+      ${phonesHTML}
+    </div>
+  `;
+}
+
+async function editListing(docId) {
+  actionType = "edit";
+  activeDocId = docId;
+  document.getElementById("formTitle").textContent = "Edit Property Listing";
+
+  const doc = await db.collection("listings").doc(docId).get();
+  if (!doc.exists) {
+    showNotification("Listing not found.");
+    return;
+  }
+  const data = doc.data();
+
+  titleEl.value = data.title || "";
+  descriptionEl.value = data.description || "";
+  priceEl.value = data.price || "";
+  locationEl.value = data.location || "";
+  bedroomsEl.value = data.bedrooms || "";
+  statusToggle.checked = data.status === "Occupied";
+  document.getElementById("statusLabel").textContent = statusToggle.checked ? "Occupied" : "Vacant";
+
+  // Clear file input because we don't have current images as files
+  imageFileEl.value = "";
+}
+
+async function toggleStatus(docId, currentStatus) {
+  const newStatus = currentStatus === "Vacant" ? "Occupied" : "Vacant";
+  await db.collection("listings").doc(docId).update({ status: newStatus });
+  loadProperties(currentUserId);
+  showNotification("Status updated.");
+}
+
+async function deleteListing(docId) {
+  if (!confirm("Are you sure you want to delete this listing?")) return;
+  await db.collection("listings").doc(docId).delete();
+  loadProperties(currentUserId);
+  showNotification("Listing deleted.");
+}
+
+async function clearInterest(listingId, interestId) {
+  await db.collection("interests").doc(interestId).delete();
+  loadProperties(currentUserId);
+  showNotification("Interest cleared.");
+}
+
+function showInterestDetails(client) {
+  const content = `
+    <p><strong>Phone:</strong> ${client.phone || "N/A"}</p>
+    <p><strong>Name:</strong> ${client.name || "N/A"}</p>
+    <p><strong>Email:</strong> ${client.email || "N/A"}</p>
+    <p><strong>Message:</strong> ${client.message || "N/A"}</p>
+  `;
+
+  document.getElementById("interest-modal-content").innerHTML = content;
+  document.getElementById("interest-modal").classList.remove("hidden");
+}
+
+// Close modal button
+document.getElementById("close-modal").onclick = () => {
+  document.getElementById("interest-modal").classList.add("hidden");
+};
+
+// Also close when clicking outside the card
+document.getElementById("interest-modal").onclick = (e) => {
+  if (e.target.id === "interest-modal") {
+    document.getElementById("interest-modal").classList.add("hidden");
+  }
+};
+
+// ✅ FIXED showNotification (added in-page toast fallback)
+function showNotification(message) {
+  // In-page toast fallback
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.right = "20px";
+  toast.style.background = "rgba(0, 0, 0, 0.8)";
+  toast.style.color = "#fff";
+  toast.style.padding = "10px 20px";
+  toast.style.borderRadius = "5px";
+  toast.style.zIndex = "9999";
+  toast.style.fontSize = "14px";
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+
+  // Native Notification API
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (reg) {
+        reg.showNotification(message);
+      } else {
+        new Notification(message);
+      }
+    });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(function (permission) {
+      if (permission === "granted") {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) {
+            reg.showNotification(message);
+          } else {
+            new Notification(message);
+          }
+        });
+      }
+    });
+  }
+}
+</script>
+<!-- Notification Container -->
+<div id="notification-container" class="fixed top-6 right-6 z-60 flex flex-col space-y-3 max-w-sm"></div>
+</body>
+</html>
